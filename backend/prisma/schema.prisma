@@ -47,6 +47,7 @@ model Book {
   type          BookType @default(BOOK)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  volumeNumber  Int?
 
   authors     BookAuthor[]
   categories  BookCategory[]

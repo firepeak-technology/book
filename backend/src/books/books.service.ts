@@ -114,7 +114,6 @@ export class BooksService {
 
         if (!book) {
             const data = {...bookData};
-            delete data.volumeNumber;
             delete data.collectionId;
 
             book = await this.prisma.book.create({
@@ -199,11 +198,14 @@ export class BooksService {
         });
 
         if (bookData.collectionId) {
-            await this.collectionService.addBookToCollection(bookData.collectionId, {
-                bookId: book.id,
-                collectionId: bookData.collectionId,
-                volumeNumber: bookData.volumeNumber,
-            })
+            try {
+                await this.collectionService.addBookToCollection(bookData.collectionId, {
+                    bookId: book.id,
+                    collectionId: bookData.collectionId,
+                    volumeNumber: bookData.volumeNumber,
+                })
+            } catch (error) {
+            }
         }
 
         return this.findOne(book.id);

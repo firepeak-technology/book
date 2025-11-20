@@ -35,22 +35,6 @@ export class CollectionsService {
         // Get collections that have books owned by user's family or user
         const collections = await this.prisma.collection.findMany({
             include: {
-                books: {
-                    include: {
-                        book: {
-                            include: {
-                                authors: {
-                                    include: {
-                                        author: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    orderBy: {
-                        volumeNumber: 'asc',
-                    },
-                },
                 _count: {
                     select: {books: true},
                 },
@@ -66,10 +50,6 @@ export class CollectionsService {
             description: collection.description,
             createdAt: collection.createdAt,
             bookCount: collection._count.books,
-            books: collection.books.map((bc) => ({
-                ...bc.book,
-                volumeNumber: bc.volumeNumber,
-            })),
         }));
     }
 
@@ -77,30 +57,6 @@ export class CollectionsService {
         const collection = await this.prisma.collection.findUnique({
             where: {id},
             include: {
-                books: {
-                    include: {
-                        book: {
-                            include: {
-                                authors: {
-                                    include: {
-                                        author: true,
-                                    },
-                                    orderBy: {
-                                        order: 'asc',
-                                    },
-                                },
-                                categories: {
-                                    include: {
-                                        category: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    orderBy: {
-                        volumeNumber: 'asc',
-                    },
-                },
                 _count: {
                     select: {books: true},
                 },
@@ -117,10 +73,6 @@ export class CollectionsService {
             description: collection.description,
             createdAt: collection.createdAt,
             bookCount: collection._count.books,
-            books: collection.books.map((bc) => ({
-                ...bc.book,
-                volumeNumber: bc.volumeNumber,
-            })),
         };
     }
 
