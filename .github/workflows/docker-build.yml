@@ -53,7 +53,6 @@ jobs:
       - name: Build and push Backend
         uses: docker/build-push-action@v5
         with:
-          target: production
           context: ./backend
           file: ./backend/Dockerfile
           push: true
@@ -101,7 +100,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
-          target: production
           file: ./frontend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
