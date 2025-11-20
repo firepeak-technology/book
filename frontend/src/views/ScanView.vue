@@ -11,7 +11,7 @@
 
       <div class="max-w-2xl mx-auto">
         <div id="reader" class="rounded-lg overflow-hidden shadow-xl"></div>
-        
+
         <div v-if="!scanning" class="card bg-base-100 shadow-xl">
           <div class="card-body">
             <div v-if="collection">
@@ -114,7 +114,7 @@
 <script setup lang="ts">
 import {onUnmounted, ref} from 'vue'
 import {useRouter} from 'vue-router'
-import {Html5Qrcode} from 'html5-qrcode'
+import {Html5Qrcode, Html5QrcodeSupportedFormats} from 'html5-qrcode'
 import {useBooksStore} from '@/stores/books'
 import api from '@/services/api'
 import {useCollectionStore} from "@/stores/collection.ts";
@@ -144,17 +144,26 @@ const manualISBN = ref('')
 let html5QrCode: Html5Qrcode | null = null
 
 const startScanning = async () => {
-  scanning.value = true
-  html5QrCode = new Html5Qrcode("reader")
+  scanning.value = true;
+
+  const formatsToSupport = [
+    Html5QrcodeSupportedFormats.QR_CODE,
+    Html5QrcodeSupportedFormats.UPC_A,
+    Html5QrcodeSupportedFormats.UPC_E,
+    Html5QrcodeSupportedFormats.UPC_EAN_EXTENSION,
+    Html5QrcodeSupportedFormats.EAN_13,
+    Html5QrcodeSupportedFormats.EAN_8,
+  ];
+  const config = {fps: 10, qrbox: 250, formatsToSupport: formatsToSupport};
+  html5QrCode = new Html5Qrcode("reader",
+      config,
+  )
 
   try {
     console.log('starting scanner')
     await html5QrCode.start(
         {facingMode: "environment"},
-        {
-          fps: 10,
-          qrbox: {width: 250, height: 250}
-        },
+        config,
         onScanSuccess,
         onScanError
     )

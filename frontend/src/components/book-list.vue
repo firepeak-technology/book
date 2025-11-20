@@ -5,6 +5,7 @@
     <router-link :to="{name: 'scan', query}" class="btn btn-primary">Scan First Book</router-link>
   </div>
   <div v-else>
+    <router-link :to="{name: 'scan', query}" class="btn btn-primary">Scan Book</router-link>
     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
       <router-link
           v-for="book in books"
