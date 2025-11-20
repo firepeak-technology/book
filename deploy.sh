@@ -5,6 +5,7 @@ set -e
 
 echo "🚀 Deploying Book Collection App..."
 
+curl -O https://raw.githubusercontent.com/firepeak-technology/book/main/deploy.sh
 curl -O https://raw.githubusercontent.com/firepeak-technology/book/main/docker-compose.yml
 
 
