@@ -67,4 +67,4 @@ USER nestjs
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Start the application
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]
