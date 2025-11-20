@@ -25,22 +25,9 @@ docker compose down
 echo "▶️ Starting PostgreSQL..."
 docker compose up -d postgres
 
-# Wait for postgres using docker compose exec instead
+# Wait for postgres
 echo "⏳ Waiting for PostgreSQL to be ready..."
-for i in {1..30}; do
-  if docker compose exec -T postgres pg_isready -U ${DB_USER} -d ${DB_NAME} >/dev/null 2>&1; then
-    echo "✅ PostgreSQL is ready!"
-    break
-  fi
-  echo "Waiting for database... ($i/30)"
-  sleep 2
-done
-
-echo "🗄️ Running database migrations..."
-docker compose run --rm \
-  -e DATABASE_URL="${DATABASE_URL}" \
-  backend \
-  sh -c "npx prisma migrate deploy || npx prisma db push --skip-generate --accept-data-loss"
+sleep 15
 
 echo "▶️ Starting all services..."
 docker compose up -d
@@ -50,6 +37,9 @@ sleep 5
 
 echo "📋 Service status:"
 docker compose ps
+
+echo "📊 Backend logs:"
+docker compose logs --tail=30 backend
 
 echo "✅ Deployment complete!"
 echo "View logs: docker compose logs -f backend"
