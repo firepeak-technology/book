@@ -10,6 +10,8 @@
       <h1 class="text-3xl font-bold mb-8 text-center">Scan Book Barcode</h1>
 
       <div class="max-w-2xl mx-auto">
+        <div id="reader" class="rounded-lg overflow-hidden shadow-xl"></div>
+        
         <div v-if="!scanning" class="card bg-base-100 shadow-xl">
           <div class="card-body">
             <div v-if="collection">
@@ -26,7 +28,6 @@
         </div>
 
         <div v-else class="space-y-4">
-          <div id="reader" class="rounded-lg overflow-hidden shadow-xl"></div>
 
           <div class="flex gap-2">
             <button @click="stopScanning" class="btn btn-error flex-1">
@@ -132,7 +133,7 @@ const collection = computedAsync(() => {
   return collectionStore.fetchCollection(colId)
 })
 
-const scanning = ref(true)
+const scanning = ref(false)
 const scannedISBN = ref('')
 const loading = ref(false)
 const bookData = ref<any>(null)
@@ -147,6 +148,7 @@ const startScanning = async () => {
   html5QrCode = new Html5Qrcode("reader")
 
   try {
+    console.log('starting scanner')
     await html5QrCode.start(
         {facingMode: "environment"},
         {
@@ -208,7 +210,9 @@ const saveBook = async () => {
   try {
     await booksStore.addBook(bookData.value)
     alert('Book added to collection!')
-    router.push('/collection')
+    bookData.value = null
+    resetScan()
+    // router.push('/collection')
   } catch (error) {
     console.error('Save error:', error)
     alert('Error saving book')
@@ -219,6 +223,7 @@ const saveBook = async () => {
 
 const resetScan = () => {
   scannedISBN.value = ''
+  manualISBN.value = ''
   bookData.value = null
   startScanning()
 }
