@@ -138,7 +138,7 @@ const loading = ref(false)
 const bookData = ref<any>(null)
 const saving = ref(false)
 const manualEntry = ref(false)
-const manualISBN = ref('9789002203626')
+const manualISBN = ref('')
 
 let html5QrCode: Html5Qrcode | null = null
 
@@ -203,8 +203,6 @@ const lookupManualISBN = () => {
   }
 }
 
-
-lookupManualISBN()
 const saveBook = async () => {
   saving.value = true
   try {
