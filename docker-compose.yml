@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: book-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - ${DB_DATA}:/var/lib/postgresql/data
+    networks:
+      - book-network
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/firepeak-technology/book-backend:latest
+    container_name: book-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: ${DATABASE_URL}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+    depends_on:
+      - postgres
+    networks:
+      - book-network
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/firepeak-technology/book-frontend:latest
+    container_name: book-frontend
+    environment:
+      VITE_API_URL: ${VITE_API_URL}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"  # Gebruik poort 8080 extern, 80 intern
+    networks:
+      - book-network
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: book-cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    volumes:
+      - ./cloudflared:/etc/cloudflared
+    networks:
+      - book-network
+
+networks:
+  book-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

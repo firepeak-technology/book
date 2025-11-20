@@ -1,0 +1,33 @@
+FROM node:23-alpine
+
+WORKDIR /app
+
+# Install netcat for healthcheck/wait scripts
+
+# Enable pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy package files
+COPY package.json pnpm-lock.yaml* ./
+
+# Install dependencies (including dev dependencies)
+RUN pnpm install
+
+# Copy Prisma schema
+COPY prisma ./prisma
+
+# Generate Prisma Client
+RUN pnpm prisma generate
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Expose port
+EXPOSE 3000
+
+# Use entrypoint for migrations
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+# Start with hot reload (NestJS watch mode)
+CMD ["pnpm", "start:dev"]
