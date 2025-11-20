@@ -24,6 +24,7 @@ COPY . .
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
+ENV DATABASE_URL=postgresql://bookuser:bookpass@postgres:5432/book_collection
 # Generate Prisma Client
 RUN pnpm prisma generate
 
