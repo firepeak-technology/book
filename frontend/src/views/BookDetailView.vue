@@ -33,6 +33,7 @@
             <div class="card-body">
               <div class="badge badge-primary">{{ book.type }}</div>
               <p v-if="book.isbn" class="text-sm"><strong>ISBN:</strong> {{ book.isbn }}</p>
+              <p v-if="book.volumeNumber" class="text-sm"><strong>Volumenumber:</strong> {{ book.volumeNumber }}</p>
               <p v-if="book.publisher" class="text-sm"><strong>Publisher:</strong> {{ book.publisher }}</p>
               <p v-if="book.publishedDate" class="text-sm"><strong>Published:</strong> {{ book.publishedDate }}</p>
               <p v-if="book.pageCount" class="text-sm"><strong>Pages:</strong> {{ book.pageCount }}</p>

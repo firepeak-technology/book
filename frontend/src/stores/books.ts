@@ -7,6 +7,7 @@ export interface Book {
     id: string
     isbn?: string
     title: string
+    volumeNumber?: number
     subtitle?: string
     description?: string
     coverUrl?: string
@@ -42,10 +43,7 @@ export const useBooksStore = (id: string) => defineStore(`books-${id}`, () => {
             Object.entries(query).forEach(([key, value]) => {
                 if (value) params.append(key, String(value))
             })
-            console.log('id', id)
-            console.log(params)
             const response = await api.get<PaginatedData<Book>>(`/books?${params.toString()}`)
-            console.log('response', response)
             books.value = response.data.data
             pagination.value = response.data.meta
             return response.data.data // includes meta
