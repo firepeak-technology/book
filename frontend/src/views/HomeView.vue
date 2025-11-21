@@ -11,11 +11,13 @@
         <div class="dropdown dropdown-end">
           <label tabindex="0" class="btn btn-ghost btn-circle avatar">
             <div class="w-10 rounded-full">
-              <img v-if="authStore.user" :src="authStore.user.picture || '/avatar.png'" />
+              <img v-if="authStore.user" :src="authStore.user.picture || '/avatar.png'"/>
             </div>
           </label>
           <ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
-            <li><router-link to="/collection">My Collection</router-link></li>
+            <li>
+              <router-link to="/collection">My Collection</router-link>
+            </li>
             <li><a @click="logout">Logout</a></li>
           </ul>
         </div>
@@ -53,22 +55,23 @@
 
         <div class="card bg-base-100 shadow-xl">
           <div class="card-body">
-            <h2 class="card-title">Family Sharing</h2>
-            <p>Share your collection with family</p>
+            <h2 class="card-title">Do I own</h2>
+            <p>Use your camera to scan barcodes and check if you own the book</p>
             <div class="card-actions justify-end">
-              <button class="btn btn-primary">Coming Soon</button>
+              <router-link to="/check" class="btn btn-primary">Check</router-link>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import {onMounted} from 'vue'
+import {useRouter} from 'vue-router'
+import {useAuthStore} from '@/stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()

@@ -33,24 +33,27 @@
   </div>
 
 
-  <div v-else-if="collections.length === 0" class="text-center py-12">
-    <p class="text-xl mb-4">No collections in your collection yet</p>
-    <button class="btn btn-primary" @click="showCreateModal = true">Add your first collection</button>
+  <div v-else-if="serieStore.series.length === 0" class="text-center py-12">
+    <p class="text-xl mb-4">No series in your collection yet</p>
+    <button class="btn btn-primary" @click="showCreateModal = true">Add your first serie</button>
   </div>
 
   <div v-else>
-    <button class="btn btn-primary" @click="showCreateModal = true">Create new collection</button>
+    <button class="btn btn-primary" @click="showCreateModal = true">Create new serie</button>
 
     <ul class="list bg-white shadow-sm rounded-box mt-4">
 
-      <li v-for="collection in collections" :key="collection.id" class="list-row">
-        <div><img class="size-10 rounded-box" :src="collection.image"/></div>
+      <li v-for="serie in serieStore.series" :key="serie.id" class="list-row">
+        <div><img class="size-10 rounded-box" :src="serie.image"/></div>
         <div>
-          <div class="text-secondary font-semibold">{{ collection.name }}</div>
-          <div class="text-xs uppercase font-semibold opacity-60">{{ collection.description }}</div>
-          <div class="text-xs uppercase font-semibold opacity-60">Total books:: {{ collection.bookCount }}</div>
+          <div class="text-secondary font-semibold">{{ serie.name }}</div>
+          <div class="text-xs uppercase font-semibold opacity-60">{{ serie.description }}</div>
+          <div class="text-xs uppercase font-semibold opacity-60">Total books:: {{
+              serie.stats.totalInCollection
+            }}/{{ serie.stats.totalInDatabase }}
+          </div>
         </div>
-        <router-link :to="'/collection/'+collection.id" class="btn btn-square btn-ghost">
+        <router-link :to="'/collection/'+serie.id" class="btn btn-square btn-ghost">
           <svg class="size-[1.2em]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                  stroke="currentColor" class="size-6">
@@ -64,7 +67,7 @@
   </div>
 
   <div v-if="noCategoryBooks" class="mt-4">
-    <h2>Books with no collection</h2>
+    <h2>Books with no series</h2>
     <BookList :books="booksStore.books"
               :pagination="booksStore.pagination"
               @page-change="booksStore.changePage"/>
@@ -75,12 +78,11 @@
 import {computed, onMounted, ref} from 'vue'
 import {useBooksStore} from '@/stores/books'
 import BookList from "@/components/book-list.vue";
-import {useCollectionStore} from "@/stores/collection.ts";
 import CreateCollectionModal from "@/components/create-collection.modal.vue";
+import {useSerieStore} from "@/stores/series.ts";
 
 const booksStore = useBooksStore('collection-view')
-const collectionStore = useCollectionStore()
-const searchQuery = ref('')
+const serieStore = useSerieStore()
 const filter = ref<string>('all')
 const loading = ref(false)
 const noCategoryBooks = computed(() => {
@@ -88,24 +90,17 @@ const noCategoryBooks = computed(() => {
 })
 const showCreateModal = ref(false)
 
-const collections = computed(() => {
-  if (searchQuery.value) {
-    return []
-  }
-  return collectionStore.collections
-})
-
 onMounted(async () => {
   loading.value = true
   try {
-    await booksStore.fetchBooks({collectionId: 'none'})
-    await collectionStore.fetchAll()
+    await booksStore.fetchBooks({serieId: 'none', sortBy: 'serieNumber'})
+    await serieStore.fetchAll()
   } finally {
     loading.value = false
   }
 })
 
 const handleCollectionCreated = async () => {
-  await collectionStore.fetchAll()
+  await serieStore.fetchAll()
 }
 </script>

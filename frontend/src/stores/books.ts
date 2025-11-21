@@ -7,13 +7,28 @@ export interface Book {
     id: string
     isbn?: string
     title: string
-    volumeNumber?: number
+    serieNumber?: number
     subtitle?: string
     description?: string
     coverUrl?: string
     type: string
     authors?: Array<{ author: { name: string } }>
     categories?: Array<{ category: { name: string } }>
+    serie?: { name: string };
+    source?: string;
+    user: {
+        purchaseDate?: Date;
+
+        purchasePrice?: number;
+
+        location?: string;
+
+        condition?: string;
+
+        notes?: string;
+
+        own?: boolean;
+    }
 }
 
 type SearchParams = {
@@ -21,7 +36,7 @@ type SearchParams = {
     limit?: number,
     search?: string,
     type?: string,
-    collectionId?: string,
+    serieId?: string,
     categoryName?: string,
     sortBy?: string,
     sortOrder?: string,
@@ -35,6 +50,7 @@ export const useBooksStore = (id: string) => defineStore(`books-${id}`, () => {
     const searchQuery = ref<SearchParams | null>(null)
 
     async function fetchBooks(query: SearchParams) {
+        console.log(query)
         loading.value = true
         searchQuery.value = query
         try {
@@ -59,6 +75,12 @@ export const useBooksStore = (id: string) => defineStore(`books-${id}`, () => {
             , page: newPage
         });
     }
+    const reload = () => {
+        fetchBooks({
+            ...(searchQuery.value ?? {}),
+            ...(pagination.value ?? {})
+        });
+    }
 
     async function searchByISBN(isbn: string) {
         loading.value = true
@@ -74,6 +96,13 @@ export const useBooksStore = (id: string) => defineStore(`books-${id}`, () => {
         const response = await api.post('/books', bookData)
         books.value.push(response.data)
         return response.data
+    }
+
+    async function own(book: Book) {
+        const response = await api.patch(`/books/${book.id}/own`, {})
+        books.value.push(response.data)
+        await reload();
+        // return response.data
     }
 
     async function fetchBook(id: string) {
@@ -96,6 +125,7 @@ export const useBooksStore = (id: string) => defineStore(`books-${id}`, () => {
         searchByISBN,
         addBook,
         fetchBook,
-        changePage
+        changePage,
+        own
     }
 })()

@@ -24,9 +24,9 @@
 
 <script setup lang="ts">
 import {onMounted, ref} from 'vue'
-import {useCollectionStore} from "@/stores/collection.ts";
+import {useSerieStore} from "@/stores/series.ts";
 
-const collectionStore = useCollectionStore()
+const serieStore = useSerieStore()
 const loading = ref(false)
 const searchQuery = ref('')
 
@@ -34,7 +34,7 @@ const searchQuery = ref('')
 onMounted(async () => {
   loading.value = true
   try {
-    await collectionStore.fetchAll()
+    await serieStore.fetchAll()
   } finally {
     loading.value = false
   }

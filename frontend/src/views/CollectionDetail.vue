@@ -6,16 +6,17 @@
           <div :src="collection.image" alt="Collection" class="rounded"></div>
         </div>
         <div>
-          <h2>{{ collection.name }} ({{ collection.bookCount }})</h2>
+          <h2>{{ collection.name }} </h2>
           <div>{{ collection.description }}</div>
         </div>
       </div>
     </div>
   </div>
+
   <BookList :books="booksStore.books"
             :pagination="booksStore.pagination"
             :query="query"
-            @page-change="booksStore.changePage"/>
+            @page-change="booksStore.changePage" @own="booksStore.own"/>
 </template>
 
 <script setup lang="ts">
@@ -23,25 +24,25 @@ import {onMounted, ref, watch} from 'vue'
 import {useBooksStore} from '@/stores/books'
 import BookList from "@/components/book-list.vue";
 import {useRoute} from "vue-router";
-import {useCollectionStore} from "@/stores/collection.ts";
 import {computedAsync} from "@vueuse/core";
+import {useSerieStore} from "@/stores/series.ts";
 
 const booksStore = useBooksStore('collection-detail')
-const collectionStore = useCollectionStore()
+const serieStore = useSerieStore()
 const loading = ref(false)
 const query = ref({})
 
 const route = useRoute()
 
 const collection = computedAsync(() => {
-  return collectionStore.fetchCollection(route.params.collectionId as string)
+  return serieStore.fetch(route.params.serieId as string)
 })
 
-watch(() => route.params.collectionId, () => {
+watch(() => route.params.serieId, () => {
   loading.value = true
-  const collectionId = route.params.collectionId as string
-  query.value = {collectionId: collectionId}
-  booksStore.fetchBooks({collectionId}).then(() => {
+  const serieId = route.params.serieId as string
+  query.value = {serieId: serieId}
+  booksStore.fetchBooks({serieId, sortBy: 'serieNumber', sortOrder: 'asc'}).then(() => {
     loading.value = false
   })
 }, {immediate: true})

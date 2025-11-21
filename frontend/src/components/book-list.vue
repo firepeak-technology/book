@@ -7,38 +7,38 @@
   <div v-else>
     <router-link :to="{name: 'scan', query}" class="btn btn-primary">Scan Book</router-link>
 
+    <ul class="list bg-white shadow-sm rounded-box mt-4">
 
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-      <router-link
-          v-for="book in books"
-          :key="book.id"
-          :to="`/book/${book.id}`"
-          class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow cursor-pointer"
-      >
-        <figure class="  pt-4">
-          <div v-if="book.volumeNumber" class="badge badge-soft badge-primary inset-0 top-2 left-2 absolute">
-            {{ book.volumeNumber }}
-          </div>
-
-          <img
-              v-if="book.coverUrl"
-              :src="book.coverUrl"
-              :alt="book.title"
-              class="rounded-xl h-36 object-cover"
-          />
-          <div v-else class="bg-base-300 rounded-xl h-48 w-full flex items-center justify-center">
-            <span class="text-4xl">📚</span>
-          </div>
-        </figure>
-        <div class="card-body p-2">
-          <h2 class="card-title text-sm line-clamp-2">{{ book.title }}</h2>
-          <p class="text-xs opacity-70 line-clamp-1" v-if="book.authors?.length">
-            {{ book.authors.map(a => a.author.name).join(', ') }}
-          </p>
-          <div class="badge badge-sm">{{ book.type }}</div>
+      <li v-for="book in books" :key="book.id" class="list-row">
+        <div class="flex items-center gap-2">
+          <span class="badge badge-soft badge-primary">{{ book.serieNumber }}</span>
+          <ThumbnailImage :book="book"/>
         </div>
-      </router-link>
-    </div>
+        <div>
+          <div class="text-secondary font-semibold">{{ book.title }}</div>
+          <div class="text-xs opacity-60">{{ book.subtitle }}</div>
+          <div class="text-xs opacity-60">{{ book.authors?.join(', ') }}</div>
+
+        </div>
+        <router-link :to="'/book/'+book.id" class="btn btn-square btn-ghost">
+          <svg class="size-[1.2em]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                 stroke="currentColor" class="size-6">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/>
+            </svg>
+          </svg>
+        </router-link>
+        <button :class="['btn btn-square',
+        book.user?.own? 'btn-success':'btn-ghost opacity-20',
+        ]" @click="emit('own', book)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+               stroke="currentColor" class="size-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+          </svg>
+        </button>
+      </li>
+    </ul>
     <div v-if="pagination">
       <Pagination
           v-bind="pagination"
@@ -53,14 +53,18 @@
 import {Book} from "@/stores/books.ts";
 import Pagination from './Pagination.vue'
 import {PaginationMeta} from "@/stores/paginated.data.ts";
+import ThumbnailImage from "@/components/thumbnail-image.vue";
 
 defineProps<{
   books: Array<Book>;
   pagination: PaginationMeta | null;
   query?: Record<string, unknown>;
+
 }>();
 
 const emit = defineEmits<{
   (e: 'page-change', page: number): void;
+  (e: 'own', book: Book): void;
 }>();
+
 </script>

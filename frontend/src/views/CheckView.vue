@@ -7,7 +7,7 @@
     </div>
 
     <div class="container mx-auto px-4 py-8">
-      <h1 class="text-3xl font-bold mb-8 text-center">Scan Book Barcode</h1>
+      <h1>Scan Book Barcode to check </h1>
 
       <div class="max-w-2xl mx-auto">
         <div id="reader" class="rounded-lg overflow-hidden shadow-xl"></div>
@@ -50,47 +50,16 @@
           <span class="loading loading-spinner loading-lg"></span>
         </div>
 
-        <div v-if="bookData" class="card bg-base-100 shadow-xl mt-8">
-          <figure v-if="bookData.coverUrl">
-            <img :src="bookData.coverUrl" :alt="bookData.title" class="w-full max-h-96 object-contain"/>
-          </figure>
-          <div class="card-body">
-            <h2 class="card-title">{{ bookData.title }}</h2>
-
-            <p v-if="bookData.subtitle" class="text-sm opacity-70">{{ bookData.subtitle }}</p>
-            <p v-if="bookData.source" class="text-sm "><strong>Source:</strong> {{ bookData.source }}</p>
-            <p v-if="bookData.serie" class="text-sm0"><strong>Serie:</strong>{{ bookData.serie.name }}
-              <strong>nr:</strong> {{ bookData.serieNumber }}</p>
-            <p v-if="bookData.authors" class="text-sm">
-              <strong>Authors:</strong> {{ bookData.authors.join(', ') }}
-            </p>
-            <p v-if="bookData.categories" class="text-sm">
-              <strong>Categories:</strong> {{ bookData.categories.join(', ') }}
-            </p>
-            <p v-if="bookData.description" class="text-sm">{{ bookData.description }}</p>
-
-            <select v-model="bookData.type" class="select select-bordered" required>
-              <option disabled selected value="">Pick a book type</option>
-              <option value="BOOK">Book</option>
-              <option value="COMIC">Comic</option>
-              <option value="MANGA">Manga</option>
-              <option value="GRAPHIC_NOVEL">Graphic Novel</option>
-            </select>
-
-            <label class="label">
-              <input type="checkbox" v-model="bookData.userBookDto.own" class="checkbox checkbox-xl checkbox-success"/>
-              Own the book
-            </label>
-
-
-            <div class="card-actions justify-end mt-4">
-              <button @click="resetScan" class="btn btn-ghost">Scan Another</button>
-              <button @click="saveBook" class="btn btn-primary" :disabled="saving">
-                {{ saving ? 'Saving...' : 'Add to Collection' }}
-              </button>
-            </div>
+        <BookSearchDetail v-if="bookData" :book="bookData">
+          <div>
+            Owned: <strong :class="['text-lg',
+              owned ? 'text-green-500' : 'text-red-500'
+            ]">{{ owned ? 'Yes' : 'No' }}</strong>
           </div>
-        </div>
+          <div class="card-actions justify-end mt-4">
+            <button @click="resetScan" class="btn btn-ghost">Scan Another</button>
+          </div>
+        </BookSearchDetail>
       </div>
     </div>
 
@@ -119,18 +88,16 @@
 import {onUnmounted, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {Html5Qrcode, Html5QrcodeSupportedFormats} from 'html5-qrcode'
-import {useBooksStore} from '@/stores/books'
 import api from '@/services/api'
+import BookSearchDetail from "@/components/BookSearchDetail.vue";
 
 const router = useRouter();
-const booksStore = useBooksStore('scan')
-
+const owned = ref(false);
 
 const scanning = ref(false)
 const scannedISBN = ref('')
 const loading = ref(false)
 const bookData = ref<any>(null)
-const saving = ref(false)
 const manualEntry = ref(false)
 const manualISBN = ref('')
 
@@ -191,8 +158,9 @@ const onScanError = (error: string) => {
 const lookupBook = async (isbn: string) => {
   loading.value = true
   try {
-    const response = await api.get(`/books/lookup/${isbn}`)
-    bookData.value = {...response.data, userBookDto: {own: true}}
+    const response = await api.get(`/books/check/${isbn}`)
+    bookData.value = response.data.book ?? {title: 'Unknown Book', authors: []}
+    owned.value = response.data.owned
   } catch (error) {
     console.error('Book lookup error:', error)
     alert('Book not found. Try manual entry or scan another book.')
@@ -210,21 +178,8 @@ const lookupManualISBN = () => {
   }
 }
 
-const saveBook = async () => {
-  saving.value = true
-  try {
-    await booksStore.addBook(bookData.value)
-    alert('Book added to collection!')
-    bookData.value = null
-    resetScan()
-    // router.push('/collection')
-  } catch (error) {
-    console.error('Save error:', error)
-    alert('Error saving book')
-  } finally {
-    saving.value = false
-  }
-}
+manualISBN.value = '9789002203626'
+lookupManualISBN()
 
 const resetScan = () => {
   scannedISBN.value = ''

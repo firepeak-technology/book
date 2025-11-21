@@ -27,6 +27,12 @@ const router = createRouter({
             meta: {requiresAuth: true},
         },
         {
+            path: '/check',
+            name: 'check',
+            component: () => import('@/views/CheckView.vue'),
+            meta: {requiresAuth: true},
+        },
+        {
             path: '/collection',
             name: 'collection',
             children: [
@@ -35,7 +41,7 @@ const router = createRouter({
                     component: () => import('@/views/CollectionList.vue'),
                 },
                 {
-                    path: ':collectionId',
+                    path: ':serieId',
                     component: () => import('@/views/CollectionDetail.vue'),
                 }
             ],
