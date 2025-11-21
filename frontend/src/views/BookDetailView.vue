@@ -19,21 +19,13 @@
       <div class="grid md:grid-cols-3 gap-8">
         <div class="md:col-span-1">
           <div class="card bg-base-100 shadow-xl">
-            <figure class="px-8 pt-8">
-              <img
-                  v-if="book.coverUrl"
-                  :src="book.coverUrl"
-                  :alt="book.title"
-                  class="rounded-xl max-h-96 object-contain"
-              />
-              <div v-else class="bg-base-300 rounded-xl h-96 w-full flex items-center justify-center">
-                <span class="text-9xl">📚</span>
-              </div>
-            </figure>
+            <CoverImage :book="book"/>
+
             <div class="card-body">
               <div class="badge badge-primary">{{ book.type }}</div>
               <p v-if="book.isbn" class="text-sm"><strong>ISBN:</strong> {{ book.isbn }}</p>
-              <p v-if="book.volumeNumber" class="text-sm"><strong>Volumenumber:</strong> {{ book.volumeNumber }}</p>
+              <p v-if="book.serie" class="text-sm"><strong>Serie:</strong> {{ book.serie.name }}</p>
+              <p v-if="book.serieNumber" class="text-sm"><strong>Serienumber:</strong> {{ book.serieNumber }}</p>
               <p v-if="book.publisher" class="text-sm"><strong>Publisher:</strong> {{ book.publisher }}</p>
               <p v-if="book.publishedDate" class="text-sm"><strong>Published:</strong> {{ book.publishedDate }}</p>
               <p v-if="book.pageCount" class="text-sm"><strong>Pages:</strong> {{ book.pageCount }}</p>
@@ -119,6 +111,7 @@ import {ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useBooksStore} from '@/stores/books'
 import {computedAsync} from "@vueuse/core";
+import CoverImage from "@/components/cover-image.vue";
 
 const route = useRoute()
 const router = useRouter()

@@ -149,7 +149,8 @@ export async function scrapeStandaardBook(isbn: string): Promise<StandaardBookIn
         discriminator.find('.c-product__discriminator-list').each((i, elem) => {
             const text = $(elem).text().trim();
             if (text.includes('nr.')) {
-                bookInfo.seriesNumber = text;
+                const numberMatch = text.match(/nr.\s*(\d+)/);
+                bookInfo.seriesNumber = numberMatch[1]
             }
         });
 

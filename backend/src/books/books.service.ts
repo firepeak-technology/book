@@ -479,6 +479,8 @@ export class BooksService {
         return this.prisma.book.findUnique({
             where: {id},
             include: {
+                coverImage: true,
+                serie: true,
                 authors: {
                     include: {
                         author: true,

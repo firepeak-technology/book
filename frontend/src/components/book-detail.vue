@@ -6,17 +6,10 @@
         :to="`/book/${book.id}`"
         class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow cursor-pointer"
     >
-      <figure class="px-4 pt-4">
-        <img
-            v-if="book.coverUrl"
-            :src="book.coverUrl"
-            :alt="book.title"
-            class="rounded-xl h-48 object-cover"
-        />
-        <div v-else class="bg-base-300 rounded-xl h-48 w-full flex items-center justify-center">
-          <span class="text-4xl">📚</span>
-        </div>
-      </figure>
+      <div class="px-4 pt-4">
+        <CoverImage :book="book"/>
+      </div>
+ 
       <div class="card-body p-4">
         <h2 class="card-title text-sm line-clamp-2">{{ book.title }}</h2>
         <p class="text-xs opacity-70 line-clamp-1" v-if="book.authors?.length">
@@ -30,6 +23,7 @@
 </template>
 <script setup lang="ts">
 import {Book} from "@/stores/books.ts";
+import CoverImage from "@/components/cover-image.vue";
 
 const props = defineProps<{
   books: Array<Book>;

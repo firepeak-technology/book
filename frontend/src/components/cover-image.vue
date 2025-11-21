@@ -1,7 +1,6 @@
 <template>
-  <figure>
-
-    <img :src="src" async :alt="book.title" class="w-full max-h-96 object-contain"/>
+  <figure class="px-8 pt-8">
+    <img :src="src" async :alt="book.title" class="w-full rounded-xl max-h-96 object-contain"/>
   </figure>
 </template>
 
