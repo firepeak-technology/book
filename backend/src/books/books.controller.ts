@@ -1,4 +1,4 @@
-import {Body, Controller, Get, Param, Post, Query, UseGuards} from '@nestjs/common';
+import {Body, Controller, Get, Param, Patch, Post, Query, UseGuards} from '@nestjs/common';
 import {AuthGuard} from '@nestjs/passport';
 import {ApiBearerAuth, ApiOperation, ApiResponse, ApiTags} from '@nestjs/swagger';
 import {BooksService} from './books.service';
@@ -54,5 +54,12 @@ export class BooksController {
     @ApiOperation({summary: 'Get book details'})
     async findOne(@Param('id') id: string) {
         return this.booksService.findOne(id);
+    }
+
+    @Patch(':id/own')
+    @ApiOperation({summary: 'Own the book'})
+    async own(
+        @CurrentUser() user, @Param('id') id: string) {
+        return this.booksService.own(user.id, id);
     }
 }

@@ -4,86 +4,118 @@ import {CreateBookDto} from './dto/create-book.dto';
 import axios from 'axios';
 
 import {CategoriesService} from '../categories/categories.service';
-import {QueryBooksDto} from "./dto/query-books.dto";
+import {QueryBooksDto, SortBy} from "./dto/query-books.dto";
 import {PaginatedBooksResponseDto} from "./dto/paginated-books-response.dto";
-import {CollectionsService} from "../collections/collections.service";
+import {mapStandaardToBook, scrapeStandaardBook} from "./scrapper/standaard-book.scrapper";
+import {SeriesService} from "../series/series.service";
+import {determineBookType} from "./scrapper/determineBookType";
+import {CoverImageService} from "../image/cover-image.service";
+import {mapBooksInBelgiumToBook, scrapeBooksInBelgiumBook} from "./scrapper/booksInBelgium-be";
 
 @Injectable()
 export class BooksService {
     constructor(private prisma: PrismaService,
                 private categoriesService: CategoriesService,
-                private collectionService: CollectionsService) {
+                private coverImageService: CoverImageService,
+                private seriesService: SeriesService) {
     }
 
     async lookupByISBN(isbn: string) {
         // Try in order of preference
         const sources = [
+            // TODO search internal DB first?
+            () => this.lookupStandaard(isbn),
+            () => this.lookupBooksInBelgium(isbn),
             () => this.lookupGoogleBooks(isbn),
             () => this.lookupOpenLibrary(isbn),
             // () => this.lookupComicVine(isbn), // For comics
         ];
+        const isExistingBook = null// await this.prisma.book.findFirst({where: {isbn}});
 
         for (const source of sources) {
             try {
                 const result = await source();
-                if (result) return result;
+                if (result) return {
+                    ...isExistingBook ?? {},
+                    ...result,
+                    categories: Array.from(new Set([...(isExistingBook?.categories || []), ...(result.categories || [])])),
+                    type: isExistingBook?.type ? isExistingBook.type : determineBookType(...result.categories)
+                };
             } catch (error) {
+                console.error(error);
                 continue; // Try next source
             }
+        }
+
+        if (isExistingBook) {
+            return isExistingBook;
         }
 
         throw new Error('Book not found in any database');
     }
 
+    private async lookupStandaard(isbn: string) {
+        const data = await scrapeStandaardBook(isbn)
+        // const serie
+        const serie = data.series ? await this.seriesService.findOrCreateByName(data.series) : null;
+        return mapStandaardToBook(data, serie);
+    }
+
+    private async lookupBooksInBelgium(isbn: string) {
+        const data = await scrapeBooksInBelgiumBook(isbn)
+        // const serie
+        const serie = data.series ? await this.seriesService.findOrCreateByName(data.series) : null;
+
+        return mapBooksInBelgiumToBook(data, serie);
+    }
+
     private async lookupOpenLibrary(isbn: string) {
-        try {
-            const response = await axios.get(`https://openlibrary.org/isbn/${isbn}.json`);
-            const data = response.data;
+
+        const response = await axios.get(`https://openlibrary.org/isbn/${isbn}.json`);
+        const data = response.data;
 
 
-            return {
-                isbn,
-                title: data.title,
-                subtitle: data.subtitle,
-                publishedDate: data.publish_date,
-                pageCount: data.number_of_pages,
-                coverUrl: `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
-                thumbnailUrl: `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`,
-                authors: data.authors ? await this.getAuthorNames(data.authors) : [],
-            };
-        } catch (error) {
-            return this.lookupGoogleBooks(isbn);
-        }
+        return {
+            isbn,
+            title: data.title,
+            subtitle: data.subtitle,
+            publishedDate: data.publish_date,
+            pageCount: data.number_of_pages,
+            categories: [],
+            coverUrl: `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
+            thumbnailUrl: `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`,
+            authors: data.authors ? await this.getAuthorNames(data.authors) : [],
+            source: 'openlibrary.org',
+        };
+
     }
 
     private async lookupGoogleBooks(isbn: string) {
-        try {
-            const response = await axios.get(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+        const response = await axios.get(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
 
-            if (response.data.totalItems === 0) {
-                throw new Error('Book not found');
-            }
-
-            const book = response.data.items[0].volumeInfo;
-
-            return {
-                isbn,
-                isbn13: book.industryIdentifiers?.find((id) => id.type === 'ISBN_13')?.identifier,
-                title: book.title,
-                subtitle: book.subtitle,
-                description: book.description,
-                publishedDate: book.publishedDate,
-                publisher: book.publisher,
-                pageCount: book.pageCount,
-                language: book.language,
-                coverUrl: book.imageLinks?.thumbnail?.replace('http:', 'https:') ?? book.previewLink,
-                thumbnailUrl: book.imageLinks?.smallThumbnail?.replace('http:', 'https:') ?? book.previewLink,
-                authors: book.authors || [],
-                categories: book.categories || [],
-            };
-        } catch (error) {
-            throw new Error('Book not found in any database');
+        if (response.data.totalItems === 0) {
+            throw new Error('Book not found');
         }
+
+        const book = response.data.items[0].volumeInfo;
+
+        return {
+            isbn,
+            isbn13: book.industryIdentifiers?.find((id) => id.type === 'ISBN_13')?.identifier,
+            title: book.title,
+            subtitle: book.subtitle,
+            description: book.description,
+            publishedDate: book.publishedDate,
+            publisher: book.publisher,
+            pageCount: book.pageCount,
+            language: book.language,
+            coverUrl: book.imageLinks?.thumbnail?.replace('http:', 'https:') ?? book.previewLink,
+            thumbnailUrl: book.imageLinks?.smallThumbnail?.replace('http:', 'https:') ?? book.previewLink,
+            authors: book.authors || [],
+            categories: book.categories || [],
+            source: 'Google Books',
+        };
+
     }
 
     private async getAuthorNames(authorRefs: any[]) {
@@ -101,7 +133,7 @@ export class BooksService {
     }
 
     async create(userId: string, createBookDto: CreateBookDto) {
-        const {authors, categories, familyBook, ...bookData} = createBookDto;
+        const {authors, categories, userBookDto, serieId, ...bookData} = createBookDto;
 
         let book = await this.prisma.book.findFirst({
             where: {
@@ -112,9 +144,16 @@ export class BooksService {
             },
         });
 
+
         if (!book) {
             const data = {...bookData};
-            delete data.collectionId;
+            if (serieId) {
+                data['serie'] = {
+                    connect: {
+                        id: serieId
+                    }
+                };
+            }
 
             book = await this.prisma.book.create({
                 data: data,
@@ -159,28 +198,30 @@ export class BooksService {
                     });
                 }
             }
+
+
+        }
+
+        if (book.coverUrl) {
+            const coverImage = await this.coverImageService.downloadFromUrl(bookData.coverUrl);
+            if (coverImage) {
+                await this.prisma.book.update({
+                    where: {id: book.id},
+                    data: {
+                        coverImage: {
+                            connect: {id: coverImage.id},
+                        },
+                        coverUrl: coverImage.imageUrl,
+                        thumbnailUrl: coverImage.thumbnailUrl,
+                    },
+                });
+            }
         }
 
         const user = await this.prisma.user.findUnique({
             where: {id: userId},
         });
 
-        if (familyBook && user.familyId) {
-            await this.prisma.familyBook.upsert({
-                where: {
-                    familyId_bookId: {
-                        familyId: user.familyId,
-                        bookId: book.id,
-                    },
-                },
-                update: {},
-                create: {
-                    familyId: user.familyId,
-                    bookId: book.id,
-                    ...familyBook,
-                },
-            });
-        }
 
         await this.prisma.userBook.upsert({
             where: {
@@ -189,24 +230,17 @@ export class BooksService {
                     bookId: book.id,
                 },
             },
-            update: {},
+            update: {
+                ...userBookDto
+            },
             create: {
                 userId,
                 bookId: book.id,
                 status: 'WANT_TO_READ',
+                ...userBookDto
             },
         });
 
-        if (bookData.collectionId) {
-            try {
-                await this.collectionService.addBookToCollection(bookData.collectionId, {
-                    bookId: book.id,
-                    collectionId: bookData.collectionId,
-                    volumeNumber: bookData.volumeNumber,
-                })
-            } catch (error) {
-            }
-        }
 
         return this.findOne(book.id);
     }
@@ -221,20 +255,11 @@ export class BooksService {
         // Get user with family info
         const user = await this.prisma.user.findUnique({
             where: {id: userId},
-            select: {familyId: true},
         });
 
         // Build where clause
         const where: any = {
             OR: [
-                // Books owned by family
-                user.familyId ? {
-                    familyBooks: {
-                        some: {
-                            familyId: user.familyId,
-                        },
-                    },
-                } : undefined,
                 // Books in user's reading list
                 {
                     userBooks: {
@@ -285,15 +310,13 @@ export class BooksService {
             };
         }
 
-        if (filters.collectionId) {
-            if (filters.collectionId === 'none') {
-                where.collections = {
+        if (filters.serieId) {
+            if (filters.serieId === 'none') {
+                where.serieId = {
                     none: {}  // Prisma syntax for "has no relations"
                 };
             } else
-                where.collections = {
-                    some: {collectionId: filters.collectionId},
-                };
+                where.serieId = {contains: filters.serieId};
         }
 
         // Add author filter
@@ -367,6 +390,8 @@ export class BooksService {
             orderBy.createdAt = sortOrder;
         } else if (sortBy === 'updatedAt') {
             orderBy.updatedAt = sortOrder;
+        } else if (sortBy === SortBy.SERIE_NUMBER) {
+            orderBy[SortBy.SERIE_NUMBER] = sortOrder;
         }
 
         // Get total count
@@ -379,6 +404,9 @@ export class BooksService {
             take,
             orderBy,
             include: {
+                coverImage: true,
+                serie: true,
+                userBooks: true,
                 authors: {
                     include: {
                         author: true,
@@ -401,7 +429,10 @@ export class BooksService {
         const hasPreviousPage = page > 1;
 
         return {
-            data: books,
+            data: books.map(book => ({
+                ...book,
+                user: book.userBooks.find(ub => ub.userId === userId)
+            })),
             meta: {
                 page,
                 limit,
@@ -413,6 +444,36 @@ export class BooksService {
         };
     }
 
+    async own(userId: string, bookId: string) {
+        const [user, book] = await Promise.all([
+            this.prisma.user.findUnique({
+                where: {id: userId},
+            }),
+            this.prisma.book.findUnique({
+                where: {id: bookId},
+            }),
+        ]);
+
+        await this.prisma.userBook.upsert({
+            where: {
+                userId_bookId: {
+                    userId,
+                    bookId: book.id,
+                },
+            },
+            update: {
+                own: true
+            },
+            create: {
+                userId,
+                bookId: book.id,
+                status: 'WANT_TO_READ',
+                own: true
+            },
+        });
+
+        return this.findOne(book.id);
+    }
 
     async findOne(id: string) {
         return this.prisma.book.findUnique({
@@ -431,11 +492,6 @@ export class BooksService {
                         category: true,
                     },
                 },
-                collections: {
-                    include: {
-                        collection: true,
-                    },
-                },
             },
         });
     }
@@ -444,10 +500,6 @@ export class BooksService {
         const user = await this.prisma.user.findUnique({
             where: {id: userId},
         });
-
-        if (!user.familyId) {
-            return {owned: false};
-        }
 
         const book = await this.prisma.book.findFirst({
             where: {
@@ -458,19 +510,20 @@ export class BooksService {
         if (!book) {
             return {owned: false};
         }
-
-        const familyBook = await this.prisma.familyBook.findUnique({
+        const userBook = await this.prisma.userBook.findFirst({
             where: {
-                familyId_bookId: {
-                    familyId: user.familyId,
-                    bookId: book.id,
-                },
+                userId,
+                bookId: book.id,
             },
         });
 
+        if (!userBook) {
+            return {owned: false, book};
+        }
+
         return {
-            owned: !!familyBook,
-            book: familyBook ? await this.findOne(book.id) : null,
+            owned: true,
+            book: book
         };
     }
 }

@@ -1,9 +1,9 @@
-import {IsArray, IsEnum, IsInt, IsNumber, IsOptional, IsString, ValidateNested} from 'class-validator';
+import {IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, ValidateNested} from 'class-validator';
 import {ApiProperty} from '@nestjs/swagger';
 import {Type} from 'class-transformer';
 import {BookCondition, BookType} from '@prisma/client';
 
-class FamilyBookDto {
+class UserBookDto {
     @ApiProperty({required: false})
     @IsOptional()
     purchaseDate?: Date;
@@ -27,6 +27,11 @@ class FamilyBookDto {
     @IsOptional()
     @IsString()
     notes?: string;
+
+    @ApiProperty({required: false})
+    @IsOptional()
+    @IsBoolean()
+    own?: boolean;
 }
 
 export class CreateBookDto {
@@ -82,12 +87,12 @@ export class CreateBookDto {
     @ApiProperty({required: false})
     @IsOptional()
     @IsString()
-    collectionId?: string;
+    serieNumber?: string;
 
     @ApiProperty({required: false})
     @IsOptional()
-    @IsNumber()
-    volumeNumber?: number;
+    @IsString()
+    serieId?: string;
 
     @ApiProperty({required: false})
     @IsOptional()
@@ -110,9 +115,9 @@ export class CreateBookDto {
     @IsString({each: true})
     categories?: string[];
 
-    @ApiProperty({type: FamilyBookDto, required: false})
+    @ApiProperty({type: UserBookDto, required: false})
     @IsOptional()
     @ValidateNested()
-    @Type(() => FamilyBookDto)
-    familyBook?: FamilyBookDto;
+    @Type(() => UserBookDto)
+    userBookDto?: UserBookDto;
 }

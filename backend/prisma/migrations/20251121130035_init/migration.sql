@@ -8,21 +8,10 @@ CREATE TYPE "BookCondition" AS ENUM ('NEW', 'LIKE_NEW', 'GOOD', 'FAIR', 'POOR');
 CREATE TYPE "ReadingStatus" AS ENUM ('WANT_TO_READ', 'READING', 'FINISHED', 'DNF');
 
 -- CreateTable
-CREATE TABLE "Family" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Family_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "familyId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -46,6 +35,9 @@ CREATE TABLE "Book" (
     "type" "BookType" NOT NULL DEFAULT 'BOOK',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "serieNumber" TEXT,
+    "serieId" TEXT,
+    "coverImageId" TEXT,
 
     CONSTRAINT "Book_pkey" PRIMARY KEY ("id")
 );
@@ -86,6 +78,16 @@ CREATE TABLE "BookCategory" (
 );
 
 -- CreateTable
+CREATE TABLE "Series" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Series_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Collection" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -93,30 +95,6 @@ CREATE TABLE "Collection" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Collection_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "BookCollection" (
-    "bookId" TEXT NOT NULL,
-    "collectionId" TEXT NOT NULL,
-    "volumeNumber" INTEGER,
-
-    CONSTRAINT "BookCollection_pkey" PRIMARY KEY ("bookId","collectionId")
-);
-
--- CreateTable
-CREATE TABLE "FamilyBook" (
-    "id" TEXT NOT NULL,
-    "familyId" TEXT NOT NULL,
-    "bookId" TEXT NOT NULL,
-    "purchaseDate" TIMESTAMP(3),
-    "purchasePrice" DOUBLE PRECISION,
-    "location" TEXT,
-    "condition" "BookCondition" NOT NULL DEFAULT 'GOOD',
-    "notes" TEXT,
-    "addedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "FamilyBook_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -131,15 +109,37 @@ CREATE TABLE "UserBook" (
     "finishedAt" TIMESTAMP(3),
     "addedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "own" BOOLEAN NOT NULL DEFAULT false,
+    "purchaseDate" TIMESTAMP(3),
+    "purchasePrice" DOUBLE PRECISION,
+    "location" TEXT,
+    "condition" "BookCondition" NOT NULL DEFAULT 'GOOD',
+    "notes" TEXT,
 
     CONSTRAINT "UserBook_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+-- CreateTable
+CREATE TABLE "CoverImage" (
+    "id" TEXT NOT NULL,
+    "originalUrl" TEXT,
+    "filename" TEXT NOT NULL,
+    "mimeType" TEXT NOT NULL,
+    "size" INTEGER NOT NULL,
+    "imagePath" TEXT NOT NULL,
+    "imageUrl" TEXT NOT NULL,
+    "thumbnailPath" TEXT NOT NULL,
+    "thumbnailUrl" TEXT NOT NULL,
+    "width" INTEGER,
+    "height" INTEGER,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "CoverImage_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateIndex
-CREATE INDEX "User_familyId_idx" ON "User"("familyId");
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Book_isbn_key" ON "Book"("isbn");
@@ -175,19 +175,7 @@ CREATE INDEX "BookCategory_bookId_idx" ON "BookCategory"("bookId");
 CREATE INDEX "BookCategory_categoryId_idx" ON "BookCategory"("categoryId");
 
 -- CreateIndex
-CREATE INDEX "BookCollection_bookId_idx" ON "BookCollection"("bookId");
-
--- CreateIndex
-CREATE INDEX "BookCollection_collectionId_idx" ON "BookCollection"("collectionId");
-
--- CreateIndex
-CREATE INDEX "FamilyBook_familyId_idx" ON "FamilyBook"("familyId");
-
--- CreateIndex
-CREATE INDEX "FamilyBook_bookId_idx" ON "FamilyBook"("bookId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "FamilyBook_familyId_bookId_key" ON "FamilyBook"("familyId", "bookId");
+CREATE UNIQUE INDEX "Series_name_key" ON "Series"("name");
 
 -- CreateIndex
 CREATE INDEX "UserBook_userId_idx" ON "UserBook"("userId");
@@ -202,7 +190,10 @@ CREATE INDEX "UserBook_status_idx" ON "UserBook"("status");
 CREATE UNIQUE INDEX "UserBook_userId_bookId_key" ON "UserBook"("userId", "bookId");
 
 -- AddForeignKey
-ALTER TABLE "User" ADD CONSTRAINT "User_familyId_fkey" FOREIGN KEY ("familyId") REFERENCES "Family"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Book" ADD CONSTRAINT "Book_serieId_fkey" FOREIGN KEY ("serieId") REFERENCES "Series"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Book" ADD CONSTRAINT "Book_coverImageId_fkey" FOREIGN KEY ("coverImageId") REFERENCES "CoverImage"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "BookAuthor" ADD CONSTRAINT "BookAuthor_bookId_fkey" FOREIGN KEY ("bookId") REFERENCES "Book"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -215,18 +206,6 @@ ALTER TABLE "BookCategory" ADD CONSTRAINT "BookCategory_bookId_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "BookCategory" ADD CONSTRAINT "BookCategory_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "BookCollection" ADD CONSTRAINT "BookCollection_bookId_fkey" FOREIGN KEY ("bookId") REFERENCES "Book"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "BookCollection" ADD CONSTRAINT "BookCollection_collectionId_fkey" FOREIGN KEY ("collectionId") REFERENCES "Collection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "FamilyBook" ADD CONSTRAINT "FamilyBook_familyId_fkey" FOREIGN KEY ("familyId") REFERENCES "Family"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "FamilyBook" ADD CONSTRAINT "FamilyBook_bookId_fkey" FOREIGN KEY ("bookId") REFERENCES "Book"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "UserBook" ADD CONSTRAINT "UserBook_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

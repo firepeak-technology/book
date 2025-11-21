@@ -1,3 +1,5 @@
+// npx prisma migrate dev
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,28 +9,14 @@ datasource db {
   // url      = env("DATABASE_URL")
 }
 
-model Family {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users      User[]
-  ownedBooks FamilyBook[]
-}
-
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String
-  familyId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  family    Family?    @relation(fields: [familyId], references: [id], onDelete: SetNull)
   readBooks UserBook[]
-
-  @@index([familyId])
 }
 
 model Book {
@@ -47,13 +35,17 @@ model Book {
   type          BookType @default(BOOK)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  volumeNumber  Int?
+  serieNumber   String?
 
-  authors     BookAuthor[]
-  categories  BookCategory[]
-  collections BookCollection[]
-  familyBooks FamilyBook[]
-  userBooks   UserBook[]
+  serieId String?
+  serie   Series? @relation(fields: [serieId], references: [id], onDelete: SetNull)
+
+  coverImageId String?
+  coverImage   CoverImage? @relation(fields: [coverImageId], references: [id], onDelete: SetNull)
+
+  authors    BookAuthor[]
+  categories BookCategory[]
+  userBooks  UserBook[]
 
   @@index([isbn])
   @@index([isbn13])
@@ -110,45 +102,20 @@ model BookCategory {
   @@index([categoryId])
 }
 
+model Series {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  books Book[]
+}
+
 model Collection {
   id          String   @id @default(uuid())
   name        String
   description String?
   createdAt   DateTime @default(now())
-
-  books BookCollection[]
-}
-
-model BookCollection {
-  bookId       String
-  collectionId String
-  volumeNumber Int?
-
-  book       Book       @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-
-  @@id([bookId, collectionId])
-  @@index([bookId])
-  @@index([collectionId])
-}
-
-model FamilyBook {
-  id            String        @id @default(uuid())
-  familyId      String
-  bookId        String
-  purchaseDate  DateTime?
-  purchasePrice Float?
-  location      String?
-  condition     BookCondition @default(GOOD)
-  notes         String?       @db.Text
-  addedAt       DateTime      @default(now())
-
-  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
-
-  @@unique([familyId, bookId])
-  @@index([familyId])
-  @@index([bookId])
 }
 
 enum BookCondition {
@@ -171,6 +138,13 @@ model UserBook {
   addedAt    DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
+  own           Boolean       @default(false)
+  purchaseDate  DateTime?
+  purchasePrice Float?
+  location      String?
+  condition     BookCondition @default(GOOD)
+  notes         String?       @db.Text
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
@@ -185,4 +159,29 @@ enum ReadingStatus {
   READING
   FINISHED
   DNF
+}
+
+model CoverImage {
+  id          String  @id @default(uuid())
+  originalUrl String? // Original URL if downloaded from web
+  filename    String // Original filename
+  mimeType    String // e.g., image/jpeg
+  size        Int // File size in bytes
+
+  // Full size image
+  imagePath String // Path to stored image
+  imageUrl  String // Public URL to access image
+
+  // Thumbnail
+  thumbnailPath String // Path to stored thumbnail
+  thumbnailUrl  String // Public URL to access thumbnail
+
+  width  Int? // Original image width
+  height Int? // Original image height
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  books Book[] // One image can be used by multiple books
 }

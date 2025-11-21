@@ -13,6 +13,7 @@ export enum SortBy {
     UPDATED_AT = 'updatedAt',
     PUBLISHED_DATE = 'publishedDate',
     PAGE_COUNT = 'pageCount',
+    SERIE_NUMBER = 'serieNumber',
 }
 
 export class QueryBooksDto {
@@ -67,13 +68,14 @@ export class QueryBooksDto {
     @IsString()
     categoryId?: string;
 
+
     @ApiPropertyOptional({
-        description: 'Filter by collection ID',
+        description: 'Filter by series ID',
         example: '123e4567-e89b-12d3-a456-426614174000',
     })
     @IsOptional()
     @IsString()
-    collectionId?: string;
+    serieId?: string;
 
     @ApiPropertyOptional({
         description: 'Filter by category name',
