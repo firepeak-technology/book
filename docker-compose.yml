@@ -20,7 +20,6 @@ services:
       PORT: 3000
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       JWT_SECRET: ${JWT_SECRET}
-      UPLOAD_DIR: ${UPLOAD_DIR}
       DATABASE_URL: ${DATABASE_URL}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       FRONTEND_URL: ${FRONTEND_URL}
@@ -30,6 +29,8 @@ services:
     networks:
       - book-network
     restart: unless-stopped
+    volumes:
+      - ${UPLOAD_DIR}:/app/uploads
 
   frontend:
     image: ghcr.io/firepeak-technology/book-frontend:latest
