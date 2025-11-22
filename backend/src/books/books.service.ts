@@ -11,6 +11,8 @@ import {SeriesService} from "../series/series.service";
 import {determineBookType} from "./scrapper/determineBookType";
 import {CoverImageService} from "../image/cover-image.service";
 import {mapBooksInBelgiumToBook, scrapeBooksInBelgiumBook} from "./scrapper/booksInBelgium-be";
+import {findGoogleBookByIsbn} from "./scrapper/google-api-books";
+import {findOpenLibraryByIsbn} from "./scrapper/open-library";
 
 @Injectable()
 export class BooksService {
@@ -20,7 +22,7 @@ export class BooksService {
                 private seriesService: SeriesService) {
     }
 
-    async lookupByISBN(isbn: string) {
+    async lookupByISBN(userId: string, isbn: string) {
         // Try in order of preference
         const sources = [
             // TODO search internal DB first?
@@ -30,7 +32,7 @@ export class BooksService {
             () => this.lookupOpenLibrary(isbn),
             // () => this.lookupComicVine(isbn), // For comics
         ];
-        const isExistingBook = null// await this.prisma.book.findFirst({where: {isbn}});
+        const isExistingBook = await this.findOneByWhere(userId, {isbn})
 
         for (const source of sources) {
             try {
@@ -48,7 +50,12 @@ export class BooksService {
         }
 
         if (isExistingBook) {
-            return isExistingBook;
+            return {
+                ...isExistingBook,
+                authors: isExistingBook.authors.map(c => c.author.name),
+                categories: isExistingBook.categories.map(c => c.category.name),
+                source: 'local'
+            };
         }
 
         throw new Error('Book not found in any database');
@@ -70,52 +77,11 @@ export class BooksService {
     }
 
     private async lookupOpenLibrary(isbn: string) {
-
-        const response = await axios.get(`https://openlibrary.org/isbn/${isbn}.json`);
-        const data = response.data;
-
-
-        return {
-            isbn,
-            title: data.title,
-            subtitle: data.subtitle,
-            publishedDate: data.publish_date,
-            pageCount: data.number_of_pages,
-            categories: [],
-            coverUrl: `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
-            thumbnailUrl: `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`,
-            authors: data.authors ? await this.getAuthorNames(data.authors) : [],
-            source: 'openlibrary.org',
-        };
-
+        return findOpenLibraryByIsbn(isbn)
     }
 
     private async lookupGoogleBooks(isbn: string) {
-        const response = await axios.get(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
-
-        if (response.data.totalItems === 0) {
-            throw new Error('Book not found');
-        }
-
-        const book = response.data.items[0].volumeInfo;
-
-        return {
-            isbn,
-            isbn13: book.industryIdentifiers?.find((id) => id.type === 'ISBN_13')?.identifier,
-            title: book.title,
-            subtitle: book.subtitle,
-            description: book.description,
-            publishedDate: book.publishedDate,
-            publisher: book.publisher,
-            pageCount: book.pageCount,
-            language: book.language,
-            coverUrl: book.imageLinks?.thumbnail?.replace('http:', 'https:') ?? book.previewLink,
-            thumbnailUrl: book.imageLinks?.smallThumbnail?.replace('http:', 'https:') ?? book.previewLink,
-            authors: book.authors || [],
-            categories: book.categories || [],
-            source: 'Google Books',
-        };
-
+        return findGoogleBookByIsbn(isbn)
     }
 
     private async getAuthorNames(authorRefs: any[]) {
@@ -242,7 +208,7 @@ export class BooksService {
         });
 
 
-        return this.findOne(book.id);
+        return this.findOne(userId, book.id);
     }
 
     async findAll(userId: string, query: QueryBooksDto): Promise<PaginatedBooksResponseDto> {
@@ -472,15 +438,33 @@ export class BooksService {
             },
         });
 
-        return this.findOne(book.id);
+        return this.findOne(userId, book.id);
     }
 
-    async findOne(id: string) {
-        return this.prisma.book.findUnique({
-            where: {id},
+
+    async findOne(userId: string, id: string) {
+        return this.findOneByWhere(userId, {id})
+    }
+
+    private async findOneByWhere(userId: string, where: any) {
+        const book = await this.prisma.book.findUnique({
+            where: {
+                ...where,
+                OR: [
+                    // Books in user's reading list
+                    {
+                        userBooks: {
+                            some: {
+                                userId,
+                            },
+                        },
+                    },
+                ].filter(Boolean),
+            },
             include: {
                 coverImage: true,
                 serie: true,
+                userBooks: true,
                 authors: {
                     include: {
                         author: true,
@@ -496,6 +480,13 @@ export class BooksService {
                 },
             },
         });
+
+        if (!book) return null
+
+        return {
+            ...book,
+            user: book.userBooks.find(ub => ub.userId === userId)
+        }
     }
 
     async checkIfOwned(userId: string, isbn: string) {

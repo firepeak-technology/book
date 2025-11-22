@@ -11,8 +11,7 @@
 
       <div class="max-w-2xl mx-auto">
         <div id="reader" class="rounded-lg overflow-hidden shadow-xl"></div>
-
-        <div v-if="!scanning" class="card bg-base-100 shadow-xl">
+        <div v-if="!bookData && !scanning " class="card bg-base-100 shadow-xl">
           <div class="card-body">
 
             <h2 class="card-title">Ready to Scan</h2>
@@ -25,7 +24,7 @@
           </div>
         </div>
 
-        <div v-else class="space-y-4">
+        <div v-else-if="!bookData.value" class="space-y-4">
 
           <div class="flex gap-2">
             <button @click="stopScanning" class="btn btn-error flex-1">
@@ -50,47 +49,25 @@
           <span class="loading loading-spinner loading-lg"></span>
         </div>
 
-        <div v-if="bookData" class="card bg-base-100 shadow-xl mt-8">
-          <figure v-if="bookData.coverUrl">
-            <img :src="bookData.coverUrl" :alt="bookData.title" class="w-full max-h-96 object-contain"/>
-          </figure>
-          <div class="card-body">
-            <h2 class="card-title">{{ bookData.title }}</h2>
+        <BookSearchDetail :book="bookData">
+          <select v-model="bookData.type" class="select select-bordered" required>
+            <option disabled selected value="">Pick a book type</option>
+            <option value="BOOK">Book</option>
+            <option value="COMIC">Comic</option>
+            <option value="MANGA">Manga</option>
+            <option value="GRAPHIC_NOVEL">Graphic Novel</option>
+          </select>
 
-            <p v-if="bookData.subtitle" class="text-sm opacity-70">{{ bookData.subtitle }}</p>
-            <p v-if="bookData.source" class="text-sm "><strong>Source:</strong> {{ bookData.source }}</p>
-            <p v-if="bookData.serie" class="text-sm0"><strong>Serie:</strong>{{ bookData.serie.name }}
-              <strong>nr:</strong> {{ bookData.serieNumber }}</p>
-            <p v-if="bookData.authors" class="text-sm">
-              <strong>Authors:</strong> {{ bookData.authors.join(', ') }}
-            </p>
-            <p v-if="bookData.categories" class="text-sm">
-              <strong>Categories:</strong> {{ bookData.categories.join(', ') }}
-            </p>
-            <p v-if="bookData.description" class="text-sm">{{ bookData.description }}</p>
-
-            <select v-model="bookData.type" class="select select-bordered" required>
-              <option disabled selected value="">Pick a book type</option>
-              <option value="BOOK">Book</option>
-              <option value="COMIC">Comic</option>
-              <option value="MANGA">Manga</option>
-              <option value="GRAPHIC_NOVEL">Graphic Novel</option>
-            </select>
-
-            <label class="label">
-              <input type="checkbox" v-model="bookData.userBookDto.own" class="checkbox checkbox-xl checkbox-success"/>
-              Own the book
-            </label>
-
-
-            <div class="card-actions justify-end mt-4">
-              <button @click="resetScan" class="btn btn-ghost">Scan Another</button>
-              <button @click="saveBook" class="btn btn-primary" :disabled="saving">
-                {{ saving ? 'Saving...' : 'Add to Collection' }}
-              </button>
+          <div class="card-actions  mt-4">
+            <div class="flex-grow">
+              <span v-if="bookData.user?.own" class="text-error">You already own it</span>
             </div>
+            <button @click="resetScan" class="btn btn-ghost">Scan Another</button>
+            <button @click="saveBook" class="btn btn-primary" :disabled="saving">
+              {{ saving ? 'Saving...' : 'I own the book' }}
+            </button>
           </div>
-        </div>
+        </BookSearchDetail>
       </div>
     </div>
 
@@ -121,6 +98,7 @@ import {useRouter} from 'vue-router'
 import {Html5Qrcode, Html5QrcodeSupportedFormats} from 'html5-qrcode'
 import {useBooksStore} from '@/stores/books'
 import api from '@/services/api'
+import BookSearchDetail from "@/components/BookSearchDetail.vue";
 
 const router = useRouter();
 const booksStore = useBooksStore('scan')
@@ -201,6 +179,7 @@ const lookupBook = async (isbn: string) => {
   }
 }
 
+
 const lookupManualISBN = () => {
   if (manualISBN.value) {
     scannedISBN.value = manualISBN.value
@@ -209,6 +188,9 @@ const lookupManualISBN = () => {
     manualISBN.value = ''
   }
 }
+
+// manualISBN.value = '9789002140099'
+// lookupManualISBN()
 
 const saveBook = async () => {
   saving.value = true

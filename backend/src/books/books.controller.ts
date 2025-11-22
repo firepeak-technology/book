@@ -17,8 +17,9 @@ export class BooksController {
 
     @Get('lookup/:isbn')
     @ApiOperation({summary: 'Lookup book by ISBN from external APIs'})
-    async lookupByISBN(@Param('isbn') isbn: string) {
-        return this.booksService.lookupByISBN(isbn);
+    async lookupByISBN(
+        @CurrentUser() user, @Param('isbn') isbn: string) {
+        return this.booksService.lookupByISBN(user.id, isbn);
     }
 
     @Get('check/:isbn')
@@ -52,8 +53,9 @@ export class BooksController {
 
     @Get(':id')
     @ApiOperation({summary: 'Get book details'})
-    async findOne(@Param('id') id: string) {
-        return this.booksService.findOne(id);
+    async findOne(
+        @CurrentUser() user, @Param('id') id: string) {
+        return this.booksService.findOne(user.id, id);
     }
 
     @Patch(':id/own')
