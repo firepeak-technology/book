@@ -24,7 +24,7 @@
           </div>
         </div>
 
-        <div v-else-if="!bookData.value" class="space-y-4">
+        <div v-else-if="!bookData" class="space-y-4">
 
           <div class="flex gap-2">
             <button @click="stopScanning" class="btn btn-error flex-1">
