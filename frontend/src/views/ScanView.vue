@@ -49,7 +49,7 @@
           <span class="loading loading-spinner loading-lg"></span>
         </div>
 
-        <BookSearchDetail :book="bookData">
+        <BookSearchDetail v-if="bookData" :book="bookData">
           <select v-model="bookData.type" class="select select-bordered" required>
             <option disabled selected value="">Pick a book type</option>
             <option value="BOOK">Book</option>
